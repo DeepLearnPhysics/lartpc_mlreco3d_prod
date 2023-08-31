@@ -1,0 +1,203 @@
+#!/bin/bash
+
+# Define a helper function
+help()
+{
+    echo "Usage: run.sh [-h]
+              [-a | --analysis]
+              [-c | --config CONFIG]
+	      [-n | --ntasks NUM_TASKS]
+	      FILES"
+    exit 0
+}
+
+# Parse command-line optional arguments
+NUM_TASKS=1
+ANALYSIS=false
+CONFIG=""
+SHORT_OPTS="n:c:ah"
+LONG_OPTS="ntasks:,config:,analysis,help"
+args=$(getopt -o $SHORT_OPTS -l $LONG_OPTS -- "$@")
+eval set -- "$args"
+
+while [ $# -ge 1 ]; do
+        case "$1" in
+                --)
+			# File list at the end
+			shift
+                        break
+			;;
+		-a|--analysis)
+			# Analysis mode
+			ANALYSIS=true
+			shift;
+			;;
+		-c|--config)
+			# Configuration file
+			CONFIG=$2
+			shift 2
+			;;
+                -n|--ntasks)
+			# Number of tasks to spawn
+                        NUM_TASKS=$2
+			shift 2
+			;;
+                -h|--help)
+			# Print help string
+			help
+                        ;;
+        esac
+done
+
+# Check a config was passed
+if [[ $CONFIG -eq "" ]]; then
+	echo Must specify a configuration file
+	exit 1
+fi
+
+# Parse the input file list
+if [[ -f $@ ]]; then
+	# Get file extension
+	FILENAME=$(basename -- $@)
+	EXTENSION="${FILENAME##*.}"
+	if [ $EXTENSION == 'txt' ]; then
+	        # If the file is a txt file, assume it contains a file list
+		FILE_LIST=$(cat $@)
+	elif [ $EXTENSION == 'root' ] || [ $EXTENSION == 'h5' ]; then
+		# If the file is a root or h5 file, assume it's an input file
+		FILE_LIST=$@
+	else
+		# If the file is neither txt, root nor h5, throw
+		echo File extension must be one of `root`, `h5` or `txt`
+		exit 1
+	fi
+else
+	# If the string is not a single path, assume it's a list
+	FILE_LIST=$@
+fi
+
+FILES=($FILE_LIST)
+NUM_FILES=${#FILES[@]}
+if [[ $NUM_FILES -gt 0 ]]; then
+	echo Found $NUM_FILES files to process
+else
+	echo No input file specified/found, abort
+	exit 1
+fi
+
+# Check that the files in the list exist
+for f in $FILE_LIST; do
+	if [[ ! -f $f ]]; then
+		echo $f not found, abort
+	fi
+done
+
+# If the number of input files exeed the maximum submission array for Slurm,
+# must make multiple submissions. Check there's enough processes available
+MAX_ARRAY_SIZE=500
+NUM_SUBS=$(($NUM_FILES/$MAX_ARRAY_SIZE + 1))
+if [[ $NUM_SUBS -gt $NUM_TASKS ]]; then
+	echo Must have at least as many processes as submissions
+	echo Cannot launch $NUM_SUBS submissions on $NUM_TASKS processes
+	exit 1
+fi
+
+# Parse the number of tasks (processes) to spawn. If the number of processes
+# is smaller than the number of files, they will be queued.
+if [[ $NUM_TASKS -gt $NUM_FILES ]]; then
+	# If there are more processes than files, lower number of processes
+	NUM_TASKS=$NUM_FILES
+elif [[ $NUM_TASKS -lt 1 ]]; then
+	# If the number of tasks is -1, spawn as many tasks as there are files 
+	NUM_TASKS=$NUM_FILES
+fi
+echo Will spawn $NUM_TASKS job\(s\) in $NUM_SUBS submission\(s\)
+
+# Launch submissions
+LAST_ID=0
+DATETIME=$(date +"%Y%m%d-%H%M%S-%N")
+for SUB in $(seq $NUM_SUBS); do
+	# Assign name to the task at hand
+	if [[ ANALYSIS -eq false ]]; then
+		PROCESS="mlreco"
+	else
+		PROCESS="ana"
+	fi
+
+	# Figure out how many tasks to assign to this submission
+	SUB_NUM_TASKS=$(($NUM_TASKS/$NUM_SUBS))
+	if [[ $(($NUM_TASKS%$NUM_SUBS)) -gt $(($SUB-1)) ]]; then
+		SUB_NUM_TASKS=$(($SUB_NUM_TASKS + 1))
+	fi
+
+	# Figure out the IDs of the files to process in this batch
+	FIRST_ID=$LAST_ID
+	LAST_ID=$(($FIRST_ID+$SUB_NUM_TASKS*($NUM_FILES/$NUM_TASKS)))
+	LEFTOVER=$(($NUM_FILES%$NUM_TASKS))
+	if [[ $LEFTOVER -ge $NUM_SUBS ]]; then
+		LAST_ID=$(($LAST_ID + $LEFTOVER/$NUM_SUBS))
+	fi
+	if [[ $(($LEFTOVER%$NUM_SUBS)) -gt $(($SUB-1)) ]]; then
+		LAST_ID=$(($LAST_ID + 1))
+	fi
+
+	SUB_NUM_FILES=$((LAST_ID-FIRST_ID))
+
+	# Build a table that maps the SLURM_ARRAY_TASK_ID to a file
+	MAP_PATH="file_map_prod_${PROCESS}_${DATETIME}_${SUB}.txt"
+	CNTR=1
+
+	echo "ArrayTaskID FilePath" > $MAP_PATH
+	for FILE_ID in $(seq $FIRST_ID $(($LAST_ID-1))); do
+      	        echo $CNTR ${FILES[FILE_ID]} >> $MAP_PATH
+		CNTR=$((CNTR+1))
+	done
+
+	# Define the base command to execute
+	BASE_COMMAND="singularity exec --bind /sdf/,/fs/ --nv /sdf/group/neutrino/images/develop.sif bash -c \"python3"
+	if [[ ANALYSIS -eq false ]]; then
+		BASE_COMMAND="$BASE_COMMAND /sdf/group/neutrino/drielsma/lartpc_mlreco3d/bin/run.py"
+	else
+		BASE_COMMAND="$BASE_COMMAND /sdf/group/neutrino/drielsma/lartpc_mlreco3d/analysis/run.py"
+	fi
+
+	# Define a base sbatch script to bild from
+	SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+      	BASE_SCRIPT=$SCRIPT_DIR/s3df_sbatch_${PROCESS}.sh
+
+	# Construct submission script
+	SCRIPT_PATH="submit_prod_${PROCESS}_${DATETIME}_${SUB}.sh"
+
+	mkdir -p output_$PROCESS
+	OUT_PATH="output_$PROCESS/\${filename}_${PROCESS}.h5"
+
+	mkdir -p batch_logs
+	LOG_PREFIX="batch_logs/prod_${PROCESS}_%A_%a"
+
+	echo "$(cat $BASE_SCRIPT)" > $SCRIPT_PATH
+	echo "" >> $SCRIPT_PATH
+
+	echo "#SBATCH --array=1-$SUB_NUM_FILES%$SUB_NUM_TASKS" >> $SCRIPT_PATH
+	echo "" >> $SCRIPT_PATH
+
+	echo "#SBATCH --job-name=prod_$PROCESS" >> $SCRIPT_PATH
+	echo "#SBATCH --output=$LOG_PREFIX.out" >> $SCRIPT_PATH
+	echo "#SBATCH --error=$LOG_PREFIX.err" >> $SCRIPT_PATH
+	echo "" >> $SCRIPT_PATH
+
+	echo "map=$MAP_PATH" >> $SCRIPT_PATH
+	echo "" >> $SCRIPT_PATH
+
+	echo "file=\$(awk -v ArrayTaskID=\$SLURM_ARRAY_TASK_ID '\$1==ArrayTaskID {print \$2}' \$map)" >> $SCRIPT_PATH
+	echo "filename=\$(basename -- \"\$file\")" >> $SCRIPT_PATH
+	echo "filename=\"\${filename%.*}\"" >> $SCRIPT_PATH
+	echo "" >> $SCRIPT_PATH
+
+	echo "$BASE_COMMAND --data_keys \$file --outfile $OUT_PATH $CONFIG\"" >> $SCRIPT_PATH
+
+	# Execute
+	sbatch $SCRIPT_PATH
+done
+
+# Done
+exit 0
