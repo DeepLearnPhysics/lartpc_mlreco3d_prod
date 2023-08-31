@@ -1,6 +1,6 @@
 # Production tools for lartpc\_mlreco3d
 
-This repository contains code used to drive [lartpc\_mlreco3d](https://github.com/DeepLearnPhysics/lartpc_mlreco3d) in a production setting. All the scripts are currently tailored for the [https://en.wikipedia.org/wiki/Slurm_Workload_Manager](SLURM workload manager) used at S3DF and NERSC.
+This repository contains code used to drive [lartpc\_mlreco3d](https://github.com/DeepLearnPhysics/lartpc_mlreco3d) in a production setting. All the scripts are currently tailored for the [SLURM workload manager](https://en.wikipedia.org/wiki/Slurm_Workload_Manager) used at S3DF and NERSC.
 
 ## Installation
 Nothing to install, the package relies on the usage of singularities ot package the dependencies.
