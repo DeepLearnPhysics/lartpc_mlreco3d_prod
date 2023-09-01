@@ -30,7 +30,7 @@ while [ $# -ge 1 ]; do
 		-a|--analysis)
 			# Analysis mode
 			ANALYSIS=true
-			shift;
+			shift
 			;;
 		-c|--config)
 			# Configuration file
@@ -50,7 +50,7 @@ while [ $# -ge 1 ]; do
 done
 
 # Check a config was passed
-if [[ $CONFIG -eq "" ]]; then
+if [ $CONFIG == "" ]; then
 	echo Must specify a configuration file
 	exit 1
 fi
@@ -118,7 +118,7 @@ LAST_ID=0
 DATETIME=$(date +"%Y%m%d-%H%M%S-%N")
 for SUB in $(seq $NUM_SUBS); do
 	# Assign name to the task at hand
-	if [[ ANALYSIS -eq false ]]; then
+	if [ ANALYSIS == false ]; then
 		PROCESS="mlreco"
 	else
 		PROCESS="ana"
@@ -155,7 +155,7 @@ for SUB in $(seq $NUM_SUBS); do
 
 	# Define the base command to execute
 	BASE_COMMAND="singularity exec --bind /sdf/,/fs/ --nv /sdf/group/neutrino/images/develop.sif bash -c \"python3"
-	if [[ ANALYSIS -eq false ]]; then
+	if [ ANALYSIS == false ]; then
 		BASE_COMMAND="$BASE_COMMAND /sdf/group/neutrino/drielsma/lartpc_mlreco3d/bin/run.py"
 	else
 		BASE_COMMAND="$BASE_COMMAND /sdf/group/neutrino/drielsma/lartpc_mlreco3d/analysis/run.py"
@@ -163,7 +163,7 @@ for SUB in $(seq $NUM_SUBS); do
 
 	# Define a base sbatch script to bild from
 	SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-      	BASE_SCRIPT=$SCRIPT_DIR/s3df_sbatch_${PROCESS}.sh
+      	BASE_SCRIPT=$SCRIPT_DIR/slurm/s3df_sbatch_${PROCESS}.sh
 
 	# Construct submission script
 	SCRIPT_PATH="submit_prod_${PROCESS}_${DATETIME}_${SUB}.sh"
