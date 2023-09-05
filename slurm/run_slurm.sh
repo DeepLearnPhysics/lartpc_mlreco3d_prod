@@ -118,10 +118,10 @@ LAST_ID=0
 DATETIME=$(date +"%Y%m%d-%H%M%S-%N")
 for SUB in $(seq $NUM_SUBS); do
 	# Assign name to the task at hand
-	if [ ANALYSIS == false ]; then
-		PROCESS="mlreco"
-	else
+	if $ANALYSIS; then
 		PROCESS="ana"
+	else
+		PROCESS="mlreco"
 	fi
 
 	# Figure out how many tasks to assign to this submission
@@ -155,10 +155,10 @@ for SUB in $(seq $NUM_SUBS); do
 
 	# Define the base command to execute
 	BASE_COMMAND="singularity exec --bind /sdf/,/fs/ --nv /sdf/group/neutrino/images/develop.sif bash -c \"python3"
-	if [ ANALYSIS == false ]; then
-		BASE_COMMAND="$BASE_COMMAND /sdf/group/neutrino/drielsma/lartpc_mlreco3d/bin/run.py"
-	else
+	if $ANALYSIS; then
 		BASE_COMMAND="$BASE_COMMAND /sdf/group/neutrino/drielsma/lartpc_mlreco3d/analysis/run.py"
+	else
+		BASE_COMMAND="$BASE_COMMAND /sdf/group/neutrino/drielsma/lartpc_mlreco3d/bin/run.py"
 	fi
 
 	# Define a base sbatch script to bild from
