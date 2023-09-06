@@ -50,7 +50,7 @@ while [ $# -ge 1 ]; do
 done
 
 # Check a config was passed
-if [ $CONFIG == "" ]; then
+if [[ $CONFIG == "" ]]; then
 	echo Must specify a configuration file
 	exit 1
 fi
