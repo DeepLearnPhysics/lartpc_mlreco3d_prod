@@ -15,8 +15,9 @@ help()
 NUM_TASKS=1
 ANALYSIS=false
 CONFIG=""
-SHORT_OPTS="n:c:ah"
-LONG_OPTS="ntasks:,config:,analysis,help"
+FM_PATH=""
+SHORT_OPTS="n:c:f:ah"
+LONG_OPTS="ntasks:,config:,flashmatch:,analysis,help"
 args=$(getopt -o $SHORT_OPTS -l $LONG_OPTS -- "$@")
 eval set -- "$args"
 
@@ -35,6 +36,11 @@ while [ $# -ge 1 ]; do
 		-c|--config)
 			# Configuration file
 			CONFIG=$2
+			shift 2
+			;;
+		-f|--flashmatch)
+			# Configuration file
+			FM_PATH=$2
 			shift 2
 			;;
                 -n|--ntasks)
@@ -154,11 +160,18 @@ for SUB in $(seq $NUM_SUBS); do
 	done
 
 	# Define the base command to execute
-	BASE_COMMAND="singularity exec --bind /sdf/,/fs/ --nv /sdf/group/neutrino/images/develop.sif bash -c \"python3"
+	BASE_COMMAND="singularity exec --bind /sdf/,/fs/ --nv /sdf/group/neutrino/images/develop.sif bash -c \""
+
+	# If flash-matching is requested, source the environment in the singularity
+	if [[ $FM_PATH != "" ]]; then
+		BASE_COMMAND="${BASE_COMMAND}source $FM_PATH/configure.sh; "
+	fi
+
+	# Finalize the base command with the appropriate executable
 	if $ANALYSIS; then
-		BASE_COMMAND="$BASE_COMMAND /sdf/group/neutrino/drielsma/lartpc_mlreco3d/analysis/run.py"
+		BASE_COMMAND="${BASE_COMMAND}python3 /sdf/group/neutrino/drielsma/lartpc_mlreco3d/analysis/run.py"
 	else
-		BASE_COMMAND="$BASE_COMMAND /sdf/group/neutrino/drielsma/lartpc_mlreco3d/bin/run.py"
+		BASE_COMMAND="${BASE_COMMAND}python3 /sdf/group/neutrino/drielsma/lartpc_mlreco3d/bin/run.py"
 	fi
 
 	# Define a base sbatch script to bild from
