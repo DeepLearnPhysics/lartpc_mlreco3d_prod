@@ -1,10 +1,17 @@
 #!/bin/bash
 
+# Check that the environement has been sourced
+if [ -z ${MLPROD_BASEDIR+x} ]; then
+	echo Must source configure.sh before running run.sh script
+	exit 1
+fi
+
 # Define a helper function
 help()
 {
     echo "Usage: run.sh [-h]
               [-a | --analysis]
+	      [-f | --flashmatch]
               [-c | --config CONFIG]
 	      [-n | --ntasks NUM_TASKS]
 	      FILES"
@@ -14,10 +21,10 @@ help()
 # Parse command-line optional arguments
 NUM_TASKS=1
 ANALYSIS=false
+FLASHMATCH=false
 CONFIG=""
-FM_PATH=""
-SHORT_OPTS="n:c:f:ah"
-LONG_OPTS="ntasks:,config:,flashmatch:,analysis,help"
+SHORT_OPTS="n:c:fah"
+LONG_OPTS="ntasks:,config:,flashmatch,analysis,help"
 args=$(getopt -o $SHORT_OPTS -l $LONG_OPTS -- "$@")
 eval set -- "$args"
 
@@ -33,14 +40,14 @@ while [ $# -ge 1 ]; do
 			ANALYSIS=true
 			shift
 			;;
+		-f|--flashmatch)
+			# Flashmatch enable
+			FLASHMATCH=true
+			shift
+			;;
 		-c|--config)
 			# Configuration file
 			CONFIG=$2
-			shift 2
-			;;
-		-f|--flashmatch)
-			# Configuration file
-			FM_PATH=$2
 			shift 2
 			;;
                 -n|--ntasks)
@@ -160,18 +167,18 @@ for SUB in $(seq $NUM_SUBS); do
 	done
 
 	# Define the base command to execute
-	BASE_COMMAND="singularity exec --bind /sdf/,/fs/ --nv /sdf/group/neutrino/images/develop.sif bash -c \""
+	BASE_COMMAND="singularity exec --bind /sdf/,/fs/ --nv $SINGULARITY_PATH bash -c \""
 
 	# If flash-matching is requested, source the environment in the singularity
-	if [[ $FM_PATH != "" ]]; then
-		BASE_COMMAND="${BASE_COMMAND}source $FM_PATH/configure.sh; "
+	if $FLASHMATCH; then
+		BASE_COMMAND="${BASE_COMMAND}source $FMATCH_BASEDIR/configure.sh; "
 	fi
 
 	# Finalize the base command with the appropriate executable
 	if $ANALYSIS; then
-		BASE_COMMAND="${BASE_COMMAND}python3 /sdf/group/neutrino/drielsma/lartpc_mlreco3d/analysis/run.py"
+		BASE_COMMAND="${BASE_COMMAND}python3 $MLRECO_BASEDIR/analysis/run.py"
 	else
-		BASE_COMMAND="${BASE_COMMAND}python3 /sdf/group/neutrino/drielsma/lartpc_mlreco3d/bin/run.py"
+		BASE_COMMAND="${BASE_COMMAND}python3 $MLRECO_BASEDIR/bin/run.py"
 	fi
 
 	# Define a base sbatch script to bild from
