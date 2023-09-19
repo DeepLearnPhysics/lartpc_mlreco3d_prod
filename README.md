@@ -30,7 +30,7 @@ The `file_list.txt` contains a list of paths to files to be processed. it can be
 ```bash
 ls -1 /path/to/dir/file*.ext > file_list.txt
 ```
-One can also provide a path the file path directly at the end of the command line.
+One can also provide the file path directly at the end of the command line.
 
 ## Repository Structure
 * `slurm` contains all slurm scripts related to production
