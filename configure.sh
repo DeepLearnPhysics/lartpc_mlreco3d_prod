@@ -11,7 +11,7 @@ fi
 export MLPROD_CFGDIR=$MLPROD_BASEDIR/config
 
 # Define path to lartc_mlreco3d
-export MLRECO_BASEDIR=/sdf/group/neutrino/drielsma/lartpc_mlreco3d
+export MLRECO_BASEDIR=/sdf/data/neutrino/software/lartpc_mlreco3d
 
 # Define path to OpT0Finder
 export FMATCH_BASEDIR=/sdf/group/neutrino/koh0207/OpT0Finder
