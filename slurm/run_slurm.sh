@@ -202,7 +202,7 @@ for SUB in $(seq $NUM_SUBS); do
 	LOG_PREFIX="batch_logs/prod_${PROCESS}_%A_%a"
 
 	echo "$(cat $BASE_SCRIPT)" > $SCRIPT_PATH
-	echo "#SBATCH --time $TIME" >> $SCRIPT_PATH
+	echo "#SBATCH --time=$TIME" >> $SCRIPT_PATH
 	echo "" >> $SCRIPT_PATH
 
 	echo "#SBATCH --array=1-$SUB_NUM_FILES%$SUB_NUM_TASKS" >> $SCRIPT_PATH
