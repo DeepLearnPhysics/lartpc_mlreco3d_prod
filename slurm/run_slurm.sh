@@ -3,7 +3,7 @@
 # Check that the environement has been sourced
 if [ -z ${MLPROD_BASEDIR+x} ]; then
 	echo Must source configure.sh before running run.sh script
-	exit 1
+	exit 0
 fi
 
 # Define a helper function
@@ -14,6 +14,7 @@ help()
 	      [-f | --flashmatch]
               [-c | --config CONFIG]
 	      [-n | --ntasks NUM_TASKS]
+	      [-t | --time TIME]
 	      FILES"
     exit 0
 }
@@ -23,8 +24,9 @@ NUM_TASKS=1
 ANALYSIS=false
 FLASHMATCH=false
 CONFIG=""
-SHORT_OPTS="n:c:fah"
-LONG_OPTS="ntasks:,config:,flashmatch,analysis,help"
+TIME="1:00:00"
+SHORT_OPTS="n:c:t:fah"
+LONG_OPTS="ntasks:,config:,time:,flashmatch,analysis,help"
 args=$(getopt -o $SHORT_OPTS -l $LONG_OPTS -- "$@")
 eval set -- "$args"
 
@@ -55,6 +57,11 @@ while [ $# -ge 1 ]; do
                         NUM_TASKS=$2
 			shift 2
 			;;
+                -t|--time)
+			# Time per process (not per batch!)
+                        TIME=$2
+			shift 2
+			;;
                 -h|--help)
 			# Print help string
 			help
@@ -65,7 +72,7 @@ done
 # Check a config was passed
 if [[ $CONFIG == "" ]]; then
 	echo Must specify a configuration file
-	exit 1
+	exit 0
 fi
 
 # Parse the input file list
@@ -82,7 +89,7 @@ if [[ -f $@ ]]; then
 	else
 		# If the file is neither txt, root nor h5, throw
 		echo File extension must be one of `root`, `h5` or `txt`
-		exit 1
+		exit 0
 	fi
 else
 	# If the string is not a single path, assume it's a list
@@ -95,7 +102,7 @@ if [[ $NUM_FILES -gt 0 ]]; then
 	echo Found $NUM_FILES files to process
 else
 	echo No input file specified/found, abort
-	exit 1
+	exit 0
 fi
 
 # Check that the files in the list exist
@@ -112,7 +119,7 @@ NUM_SUBS=$(($NUM_FILES/$MAX_ARRAY_SIZE + 1))
 if [[ $NUM_SUBS -gt $NUM_TASKS ]]; then
 	echo Must have at least as many processes as submissions
 	echo Cannot launch $NUM_SUBS submissions on $NUM_TASKS processes
-	exit 1
+	exit 0
 fi
 
 # Parse the number of tasks (processes) to spawn. If the number of processes
@@ -195,6 +202,7 @@ for SUB in $(seq $NUM_SUBS); do
 	LOG_PREFIX="batch_logs/prod_${PROCESS}_%A_%a"
 
 	echo "$(cat $BASE_SCRIPT)" > $SCRIPT_PATH
+	echo "#SBATCH --time $TIME" >> $SCRIPT_PATH
 	echo "" >> $SCRIPT_PATH
 
 	echo "#SBATCH --array=1-$SUB_NUM_FILES%$SUB_NUM_TASKS" >> $SCRIPT_PATH
