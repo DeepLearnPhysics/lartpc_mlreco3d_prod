@@ -14,7 +14,7 @@ export MLPROD_CFGDIR=$MLPROD_BASEDIR/config
 export MLRECO_BASEDIR=/sdf/data/neutrino/software/lartpc_mlreco3d
 
 # Define path to OpT0Finder
-export FMATCH_BASEDIR=/sdf/group/neutrino/koh0207/OpT0Finder
+export FMATCH_BASEDIR=/sdf/data/neutrino/software/OpT0Finder
 
 # Define path to the singularity container
 export SINGULARITY_PATH=/sdf/group/neutrino/images/develop.sif
