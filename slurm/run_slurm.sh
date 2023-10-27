@@ -114,7 +114,7 @@ done
 
 # If the number of input files exeed the maximum submission array for Slurm,
 # must make multiple submissions. Check there's enough processes available
-MAX_ARRAY_SIZE=1000
+MAX_ARRAY_SIZE=500
 NUM_SUBS=$(($NUM_FILES/$MAX_ARRAY_SIZE + 1))
 if [[ $NUM_SUBS -gt $NUM_TASKS ]]; then
 	echo Must have at least as many processes as submissions
