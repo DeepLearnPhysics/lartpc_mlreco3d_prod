@@ -176,6 +176,11 @@ for SUB in $(seq $NUM_SUBS); do
 	# Define the base command to execute
 	BASE_COMMAND="singularity exec --bind /sdf/,/fs/ --nv $SINGULARITY_PATH bash -c \""
 
+	# If a LArCV path is provided, source the environment in the singularity
+	if [ $LARCV_BASEDIR ]; then
+		BASE_COMMAND="${BASE_COMMAND}source $LARCV_BASEDIR/configure.sh; "
+	fi
+
 	# If flash-matching is requested, source the environment in the singularity
 	if $FLASHMATCH; then
 		BASE_COMMAND="${BASE_COMMAND}source $FMATCH_BASEDIR/configure.sh; "
