@@ -15,6 +15,7 @@ help()
               [-c | --config CONFIG]
 	      [-n | --ntasks NUM_TASKS]
 	      [-t | --time TIME]
+	      [-s | --suffix SUFFIX]
 	      FILES"
     exit 0
 }
@@ -25,8 +26,9 @@ ANALYSIS=false
 FLASHMATCH=false
 CONFIG=""
 TIME="1:00:00"
-SHORT_OPTS="n:c:t:fah"
-LONG_OPTS="ntasks:,config:,time:,flashmatch,analysis,help"
+SUFFIX=""
+SHORT_OPTS="n:c:t:s:fah"
+LONG_OPTS="ntasks:,config:,time:,suffix:,flashmatch,analysis,help"
 args=$(getopt -o $SHORT_OPTS -l $LONG_OPTS -- "$@")
 eval set -- "$args"
 
@@ -62,12 +64,29 @@ while [ $# -ge 1 ]; do
                         TIME=$2
 			shift 2
 			;;
+                -s|--suffix)
+			# Suffix to append to the input files names
+                        SUFFIX=$2
+			shift 2
+			;;
                 -h|--help)
 			# Print help string
 			help
                         ;;
         esac
 done
+
+# Determine which process to call
+if $ANALYSIS; then
+	PROCESS="ana"
+else
+	PROCESS="mlreco"
+fi
+
+# Parse the suffix
+if [[ $SUFFIX == "" ]]; then
+	SUFFIX=$PROCESS
+fi
 
 # Check a config was passed
 if [[ $CONFIG == "" ]]; then
@@ -133,16 +152,11 @@ elif [[ $NUM_TASKS -lt 1 ]]; then
 fi
 echo Will spawn $NUM_TASKS job\(s\) in $NUM_SUBS submission\(s\)
 
+
 # Launch submissions
 LAST_ID=0
-DATETIME=$(date +"%Y%m%d-%H%M%S-%N")
+DATETIME=$(date +"%Y%m%d_%H%M%S_%N")
 for SUB in $(seq $NUM_SUBS); do
-	# Assign name to the task at hand
-	if $ANALYSIS; then
-		PROCESS="ana"
-	else
-		PROCESS="mlreco"
-	fi
 
 	# Figure out how many tasks to assign to this submission
 	SUB_NUM_TASKS=$(($NUM_TASKS/$NUM_SUBS))
@@ -164,7 +178,7 @@ for SUB in $(seq $NUM_SUBS); do
 	SUB_NUM_FILES=$((LAST_ID-FIRST_ID))
 
 	# Build a table that maps the SLURM_ARRAY_TASK_ID to a file
-	MAP_PATH="file_map_prod_${PROCESS}_${DATETIME}_${SUB}.txt"
+	MAP_PATH="file_map_prod_${SUFFIX}_${DATETIME}_${SUB}.txt"
 	CNTR=1
 
 	echo "ArrayTaskID FilePath" > $MAP_PATH
@@ -198,13 +212,13 @@ for SUB in $(seq $NUM_SUBS); do
       	BASE_SCRIPT=$SCRIPT_DIR/slurm/s3df_sbatch_${PROCESS}.sh
 
 	# Construct submission script
-	SCRIPT_PATH="submit_prod_${PROCESS}_${DATETIME}_${SUB}.sh"
+	SCRIPT_PATH="submit_prod_${SUFFIX}_${DATETIME}_${SUB}.sh"
 
-	mkdir -p output_$PROCESS
-	OUT_PATH="output_$PROCESS/\${filename}_${PROCESS}.h5"
+	mkdir -p output_$SUFFIX
+	OUT_PATH="output_$SUFFIX/\${filename}_${SUFFIX}.h5"
 
 	mkdir -p batch_logs
-	LOG_PREFIX="batch_logs/prod_${PROCESS}_%A_%a"
+	LOG_PREFIX="batch_logs/prod_${SUFFIX}_%A_%a"
 
 	echo "$(cat $BASE_SCRIPT)" > $SCRIPT_PATH
 	echo "#SBATCH --time=$TIME" >> $SCRIPT_PATH
@@ -213,7 +227,7 @@ for SUB in $(seq $NUM_SUBS); do
 	echo "#SBATCH --array=1-$SUB_NUM_FILES%$SUB_NUM_TASKS" >> $SCRIPT_PATH
 	echo "" >> $SCRIPT_PATH
 
-	echo "#SBATCH --job-name=prod_$PROCESS" >> $SCRIPT_PATH
+	echo "#SBATCH --job-name=prod_$SUFFIX" >> $SCRIPT_PATH
 	echo "#SBATCH --output=$LOG_PREFIX.out" >> $SCRIPT_PATH
 	echo "#SBATCH --error=$LOG_PREFIX.err" >> $SCRIPT_PATH
 	echo "" >> $SCRIPT_PATH
