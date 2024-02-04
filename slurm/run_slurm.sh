@@ -10,6 +10,7 @@ fi
 help()
 {
     echo "Usage: run.sh [-h]
+              [-A | --account]
               [-a | --analysis]
 	      [-f | --flashmatch]
               [-c | --config CONFIG]
@@ -21,14 +22,15 @@ help()
 }
 
 # Parse command-line optional arguments
+ACCOUNT="neutrino:icarus-ml"
 NUM_TASKS=1
 ANALYSIS=false
 FLASHMATCH=false
 CONFIG=""
 TIME="1:00:00"
 SUFFIX=""
-SHORT_OPTS="n:c:t:s:fah"
-LONG_OPTS="ntasks:,config:,time:,suffix:,flashmatch,analysis,help"
+SHORT_OPTS="A:n:c:t:s:fah"
+LONG_OPTS="account:,ntasks:,config:,time:,suffix:,flashmatch,analysis,help"
 args=$(getopt -o $SHORT_OPTS -l $LONG_OPTS -- "$@")
 eval set -- "$args"
 
@@ -38,6 +40,11 @@ while [ $# -ge 1 ]; do
 			# File list at the end
 			shift
                         break
+			;;
+		-A|--account)
+			# Account name
+			ACCOUNT=$2
+			shift 2
 			;;
 		-a|--analysis)
 			# Analysis mode
@@ -222,6 +229,7 @@ for SUB in $(seq $NUM_SUBS); do
 
 	echo "$(cat $BASE_SCRIPT)" > $SCRIPT_PATH
 	echo "#SBATCH --time=$TIME" >> $SCRIPT_PATH
+	echo "#SBATCH --account=$ACCOUNT" >> $SCRIPT_PATH
 	echo "" >> $SCRIPT_PATH
 
 	echo "#SBATCH --array=1-$SUB_NUM_FILES%$SUB_NUM_TASKS" >> $SCRIPT_PATH

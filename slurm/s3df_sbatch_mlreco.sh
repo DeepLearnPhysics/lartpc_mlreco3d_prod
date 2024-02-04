@@ -1,6 +1,5 @@
 #!/bin/bash 
 
-#SBATCH --account=neutrino:icarus-ml
 #SBATCH --partition=ampere
 
 #SBATCH --ntasks=1
