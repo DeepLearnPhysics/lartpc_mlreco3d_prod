@@ -76,3 +76,16 @@ Caveats:
   - PPN labeling is wrong
     - A lot of points, both start and end, are missing
   - K+/K- not yet included as a PID target (only gamma, e, mu, pi, p for now)
+
+
+```shell
+2x2_full_chain_240709.cfg
+```
+
+Description:
+  Updates w.r.t. to the previous iteration:
+    - Completely new training sample which solves most labeling issues
+    - Adding K as a PID output
+
+Caveats:
+  - Module 2 simulation is wrong
