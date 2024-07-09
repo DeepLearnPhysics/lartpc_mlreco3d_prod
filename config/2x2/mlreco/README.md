@@ -52,7 +52,7 @@ Caveats:
 ```
 
 Description:
-  Updates w.r.t. to the previous iteration:
+  - Updates w.r.t. to the previous iteration:
     - Parse neutrino information
     - Remove semantic type enforcement (can be done at the analysis tools level)
 
@@ -68,7 +68,7 @@ Caveats:
 ```
 
 Description:
-  Updates w.r.t. to the previous iteration:
+  - Updates w.r.t. to the previous iteration:
     - Parse flash information
 
 Caveats:
@@ -83,7 +83,7 @@ Caveats:
 ```
 
 Description:
-  Updates w.r.t. to the previous iteration:
+  - Updates w.r.t. to the previous iteration:
     - Completely new training sample which solves most labeling issues
     - Adding K as a PID output
 
